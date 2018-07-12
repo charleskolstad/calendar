@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body ng-app="myApp"><!--previous-week | current-week | weekend-->
+    <div ng-controller="CalCtrl">
+        <div class="container">
+            <table class="cal-table">
+                <summary class="cal-summary">
+                    <button class="btn btn-outline-secondary btn-sm" ng-click="ChangeMonth(-1)">{{GetMonth(date.getMonth() - 1)}}</button>
+                    <span class="display-4 ml-1 mr-1"><strong>{{GetMonth(date.getMonth())}}</strong> {{date.getFullYear()}}</span>
+                    <button class="btn btn-outline-primary btn-sm" ng-click="ChangeMonth(1)">{{GetMonth(date.getMonth() + 1)}}</button>
+                    <button class="btn btn-outline-warning btn-sm" ng-click="Today()">Today</button>
+                </summary>
+                <thead>
+                    <tr class="cal-row">
+                        <th class="cal-header">Sun</th>
+                        <th class="cal-header">Mon</th>
+                        <th class="cal-header">Tue</th>
+                        <th class="cal-header">Wed</th>
+                        <th class="cal-header">Thu</th>
+                        <th class="cal-header">Fri</th>
+                        <th class="cal-header">Sat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="cal-row" ng-repeat="item in data">
+                        <td ng-repeat="i in item" ng-class="i.getMonth() != date.getMonth()? 'cal-column weekend':'cal-column'">
+                            <span class="date"><!-- ng-class="i.getDate() == date.getDate() && i.getMonth() == date.getMonth() ? 'date different-calendar':'date'"-->
+                            <p class="mr-1">{{i.toString().split(' ')[1]}} {{i.toString().split(' ')[2]}}</p>
+
+                            <ul>
+                                <li>
+                                    <button class="btn btn-info btn-block" ng-show="DaysAppointments(i.toString()) > 0" ng-click="ShowEventsModal(i)">Appointments:<br />{{DaysAppointments(i.toString())}}</button>
+                                </li>
+                            </ul> 
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="modal fade" id="eventModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                        <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Task</th>
+                                    <th scope="col">Time</th>
+                                    <th scope="col"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="apt in DayAppt.Appt">                                    
+                                    <th scope="row">{{apt.task}}</th>
+                                    <td>{{apt.time}}</td>
+                                    <td>
+                                        <button class="btn btn-success">View</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+    <script>
+        angular.module("myApp", []).controller("CalCtrl", function($scope){
+            $scope.date = new Date();//2018, 11, 24, 0, 0, 0, 0            
+            $scope.data = [];
+            $scope.DayAppt = [];
+            
+            $scope.SetCalendar = function(){
+                $scope.data = [];
+                let firstSunday = getSunday($scope.date);
+                let ld = new Date($scope.date.getFullYear(), $scope.date.getMonth() + 1, 0);
+                let week = [];
+                let w = 0;
+                let numDays = Math.round((ld - Date.parse(firstSunday))/(1000*60*60*24))
+
+                for(let i = 0; i <= numDays; i++){
+                    if(w <= 6){
+                        week.push(getDay(firstSunday, i));
+                        w = w +1;
+                    }
+                    else{
+                        $scope.data.push(week);
+                        week = [];
+
+                        week.push(getDay(firstSunday, i));
+                        w = 1;
+                    }
+                }
+
+                if(week.length > 0)
+                    $scope.data.push(week);
+            }
+            
+            $scope.SetCalendar();
+            
+            $scope.Appointments = {
+                MyAppointment : [ {date: new Date(2018, 11, 24, 0, 0, 0, 0), task: 'Bus Stop', time: '2 pm' },
+                                  {date: new Date(2018, 11, 24, 0, 0, 0, 0), task: 'Bus Stop', time: '5 pm' },
+                                  {date: new Date(2018, 11, 5, 0, 0, 0, 0), task: 'Bus Stop', time: '5 pm' }]
+            };
+            
+            $scope.DaysAppointments = function(d){
+                var result = $scope.Appointments.MyAppointment.filter(obj => {
+                   return obj.date.toString() == d; 
+                });
+                
+                return result.length;
+            }
+            
+            function getSunday(d){
+                let firstDay = new Date(d.getFullYear(), d.getMonth(), 1);
+                let lastDayPrevMonth = new Date(d.getFullYear(), d.getMonth(), 0);                
+                let diff = firstDay.getDate() - firstDay.getDay();
+                
+                lastDayPrevMonth.setDate(lastDayPrevMonth.getDate() + diff);
+                return lastDayPrevMonth.toString();
+            }
+            
+            function getDay(d, weekDay){
+                d = new Date(d);
+                let day = d.getDay(),
+                    diff = d.getDate() - day + weekDay;
+                
+                return new Date(d.setDate(diff));
+            }
+            
+            function daysInMonth (month, year) {
+                return new Date(year, month, 0).getDate();
+            }
+            
+            $scope.GetMonth = function(d){
+                if(d < 0)
+                    d = 11;
+                else if(d > 11)
+                    d = 0;
+                
+                let monthNames= [ "January", "Febuary", "March", "April", "May", "June", "July", "August", "September", "Octoeber", "November", "December" ];
+                return monthNames[d];
+            }
+            
+            $scope.ChangeMonth = function(d){
+                $scope.date.setMonth($scope.date.getMonth() + d);
+                $scope.SetCalendar();
+            }
+            
+            $scope.Today = function(){
+                $scope.date = new Date();
+                $scope.SetCalendar();
+            }
+            
+            $scope.ShowEventsModal = function(i){
+                var result = $scope.Appointments.MyAppointment.filter(obj => {
+                   return obj.date.toString() == i; 
+                });
+                $scope.DayAppt.Appt = result;                
+                
+                angular.element("#eventModal").modal("show");
+            }
+        });
+    </script>
+</body>
+</html>
